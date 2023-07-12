@@ -1,8 +1,9 @@
 package account.DTO;
 
-import account.model.Action;
+import lombok.Data;
 
+@Data
 public class UserOperationRequest {
     private String user;
-    private String operation;
+    private UserOperation operation;
 }

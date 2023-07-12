@@ -2,11 +2,11 @@
   <library name="Gradle: org.springframework:spring-expression:6.0.10" type="java-imported" external-system-id="GRADLE">
     <properties groupId="org.springframework" artifactId="spring-expression" version="6.0.10" />
     <CLASSES>
-      <root url="jar://C:/Gradle/gradle-8.1.1/caches/modules-2/files-2.1/org.springframework/spring-expression/6.0.10/bd8c93e473e713fe9150a772487507a8e600d5f1/spring-expression-6.0.10.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.springframework/spring-expression/6.0.10/bd8c93e473e713fe9150a772487507a8e600d5f1/spring-expression-6.0.10.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://C:/Gradle/gradle-8.1.1/caches/modules-2/files-2.1/org.springframework/spring-expression/6.0.10/923a081ed4f088277096f91a4f9ebe5c0c7653bf/spring-expression-6.0.10-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.springframework/spring-expression/6.0.10/923a081ed4f088277096f91a4f9ebe5c0c7653bf/spring-expression-6.0.10-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

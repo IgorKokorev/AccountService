@@ -2,11 +2,11 @@
   <library name="Gradle: net.bytebuddy:byte-buddy:1.14.5" type="java-imported" external-system-id="GRADLE">
     <properties groupId="net.bytebuddy" artifactId="byte-buddy" version="1.14.5" />
     <CLASSES>
-      <root url="jar://C:/Gradle/gradle-8.1.1/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy/1.14.5/28a424c0c4f362568e904d992c239c996cf7adc7/byte-buddy-1.14.5.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy/1.14.5/28a424c0c4f362568e904d992c239c996cf7adc7/byte-buddy-1.14.5.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://C:/Gradle/gradle-8.1.1/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy/1.14.5/2ffbe5b4f4fe115ca0aa000e9de5c13eb6fd924c/byte-buddy-1.14.5-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy/1.14.5/2ffbe5b4f4fe115ca0aa000e9de5c13eb6fd924c/byte-buddy-1.14.5-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

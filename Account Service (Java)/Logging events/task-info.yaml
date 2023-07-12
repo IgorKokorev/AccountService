@@ -1701,55 +1701,6 @@ files:
         private RoleOperation operation;
     }
   learner_created: true
-- name: src/account/config/AppConfig.java
-  visible: true
-  text: |
-    package account.config;
-
-    import lombok.RequiredArgsConstructor;
-    import org.springframework.boot.web.client.RestTemplateBuilder;
-    import org.springframework.context.annotation.Bean;
-    import org.springframework.context.annotation.Configuration;
-    import org.springframework.security.authentication.AuthenticationManager;
-    import org.springframework.security.authentication.AuthenticationProvider;
-    import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-    import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-    import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-    import org.springframework.security.core.userdetails.UserDetailsService;
-    import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-    import org.springframework.security.crypto.password.PasswordEncoder;
-    import org.springframework.web.client.RestTemplate;
-
-    @Configuration
-    @RequiredArgsConstructor
-    public class AppConfig {
-        private final UserDetailsService userDetailsService;
-
-    //    @Bean
-    //    AuthenticationProvider authenticationProvider() {
-    //        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-    //        authProvider.setUserDetailsService(userDetailsService);
-    //        authProvider.setPasswordEncoder(encoder());
-    //        return authProvider;
-    //    }
-
-    //    @Bean
-    //    AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-    //        return config.getAuthenticationManager();
-    //    }
-    //
-    //    @Bean
-    //    public PasswordEncoder encoder() {
-    //        return new BCryptPasswordEncoder();
-    //    }
-
-    //    @Bean
-    //    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-    //        return builder.build();
-    //    }
-
-    }
-  learner_created: true
 - name: src/account/config/CustomAccessDeniedHandler.java
   visible: true
   text: |
@@ -1902,49 +1853,6 @@ files:
         Optional<Role> findByRole(String role);
     }
   learner_created: true
-- name: src/account/config/CustomAuthenticationFailureHandler.java
-  visible: true
-  text: |
-    package account.config;
-
-    import com.fasterxml.jackson.databind.ObjectMapper;
-    import jakarta.servlet.ServletException;
-    import jakarta.servlet.http.HttpServletRequest;
-    import jakarta.servlet.http.HttpServletResponse;
-    import org.json.JSONObject;
-    import org.springframework.http.HttpStatus;
-    import org.springframework.security.core.AuthenticationException;
-    import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-    import org.springframework.stereotype.Component;
-
-    import java.io.IOException;
-    import java.time.LocalDateTime;
-    import java.util.Calendar;
-    import java.util.HashMap;
-    import java.util.Map;
-
-    @Component
-    public class CustomAuthenticationFailureHandler implements AuthenticationFailureHandler {
-
-        private final ObjectMapper objectMapper = new ObjectMapper();
-
-        @Override
-        public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
-
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            Map<String, Object> data = new HashMap<>();
-            data.put(
-                    "timestamp",
-                    Calendar.getInstance().getTime());
-            data.put(
-                    "exception",
-                    exception.getMessage());
-
-            response.getOutputStream()
-                    .println(objectMapper.writeValueAsString(data));
-        }
-    }
-  learner_created: true
 - name: src/account/controller/AdminController.java
   visible: true
   text: |
@@ -2072,6 +1980,24 @@ files:
 - name: src/account/DTO/UserOperationRequest.java
   visible: true
   learner_created: true
+- name: src/account/config/AuthenticationEventListener.java
+  visible: true
+  learner_created: true
+- name: src/account/service/UserService.java
+  visible: true
+  learner_created: true
+- name: src/account/service/SecurityService.java
+  visible: true
+  learner_created: true
+- name: src/account/DTO/UserOperation.java
+  visible: true
+  learner_created: true
+- name: src/account/controller/SecurityController.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/16606#comment
-status: Unchecked
-record: -1
+status: Solved
+feedback:
+  message: Congratulations!
+  time: "Wed, 12 Jul 2023 18:49:21 UTC"
+record: 7

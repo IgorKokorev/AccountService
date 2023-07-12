@@ -1001,6 +1001,661 @@ files:
       };
     }
   learner_created: false
+- name: src/account/controller/SecurityController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.model.SecurityEvent;
+    import account.repository.SecurityEventRepository;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RestController;
+
+    import java.util.List;
+
+    @RestController
+    @RequiredArgsConstructor
+    public class SecurityController {
+        private final SecurityEventRepository securityEventRepository;
+
+        @GetMapping("/api/security/events/")
+        public ResponseEntity<List<SecurityEvent>> getAllSecurityEvents() {
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(securityEventRepository.findAll());
+        }
+    }
+  learner_created: true
+- name: src/account/DTO/UserOperationRequest.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import lombok.Data;
+
+    @Data
+    public class UserOperationRequest {
+        private String user;
+        private UserOperation operation;
+    }
+  learner_created: true
+- name: src/account/DTO/ChangeRoleRequest.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import com.fasterxml.jackson.annotation.JsonIgnore;
+    import lombok.Data;
+
+    @Data
+    public class ChangeRoleRequest {
+        public static enum RoleOperation {GRANT, REMOVE};
+
+        private String user;
+        private String role;
+        private RoleOperation operation;
+    }
+  learner_created: true
+- name: src/account/DTO/UserOperation.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    public enum UserOperation {
+        LOCK,
+        UNLOCK
+    }
+  learner_created: true
+- name: src/account/repository/SecurityEventRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.SecurityEvent;
+    import org.springframework.data.repository.CrudRepository;
+
+    import java.util.List;
+
+    public interface SecurityEventRepository extends CrudRepository<SecurityEvent, Long> {
+        List<SecurityEvent> findAll();
+
+    }
+  learner_created: true
+- name: src/account/config/CustomAccessDeniedHandler.java
+  visible: true
+  text: |
+    package account.config;
+
+    import account.model.Action;
+    import account.model.User;
+    import account.service.SecurityService;
+    import account.service.UserService;
+    import jakarta.servlet.ServletException;
+    import jakarta.servlet.http.HttpServletRequest;
+    import jakarta.servlet.http.HttpServletResponse;
+    import lombok.RequiredArgsConstructor;
+    import org.json.JSONObject;
+    import org.springframework.security.access.AccessDeniedException;
+    import org.springframework.security.web.access.AccessDeniedHandler;
+    import org.springframework.stereotype.Component;
+
+    import java.io.IOException;
+    import java.nio.charset.StandardCharsets;
+    import java.time.LocalDateTime;
+    import java.util.Base64;
+    import java.util.Optional;
+
+    @Component
+    @RequiredArgsConstructor
+    public class CustomAccessDeniedHandler implements AccessDeniedHandler {
+        private final SecurityService securityService;
+
+        @Override
+        public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
+            response.setContentType("application/json;charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+
+            LocalDateTime timestamp = LocalDateTime.now();
+            String path = request.getRequestURI();
+
+            // get user from request and save new failed login nr
+            final String authorization = request.getHeader("Authorization");
+            String base64Credentials = authorization.substring("Basic".length()).trim();
+            byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
+            String credentials = new String(credDecoded, StandardCharsets.UTF_8);
+            // credentials = username:password
+            final String[] values = credentials.split(":");
+            String username = values[0];
+
+            securityService.createSecurityEvent(
+                    timestamp,
+                    Action.ACCESS_DENIED,
+                    username,
+                    path,
+                    path
+            );
+
+            response.getWriter().write(new JSONObject()
+                    .put("timestamp", timestamp)
+                    .put("status", 403)
+                    .put("error", "Forbidden")
+                    .put("message", "Access Denied!")
+                    .put("path", path)
+                    .toString());
+        }
+
+    }
+  learner_created: true
+- name: src/account/DTO/UserStatusResponse.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+
+    @Data
+    @AllArgsConstructor
+    public class UserStatusResponse {
+        private String user;
+        private String status;
+
+    }
+  learner_created: true
+- name: src/account/model/SecurityEvent.java
+  visible: true
+  text: |
+    package account.model;
+
+    import jakarta.persistence.*;
+    import lombok.Getter;
+    import lombok.NoArgsConstructor;
+    import lombok.Setter;
+
+    import java.time.LocalDate;
+    import java.time.LocalDateTime;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @Entity
+    @Table(name = "security_event")
+    public class SecurityEvent {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private long id;
+
+        private LocalDateTime date;
+        private Action action;
+        private String subject;
+        private String object;
+        private String path;
+
+        public SecurityEvent(LocalDateTime date, Action action, String subject, String object, String path) {
+            this.date = date;
+            this.action = action;
+            this.subject = subject;
+            this.object = object;
+            this.path = path;
+        }
+    }
+  learner_created: true
+- name: src/account/service/RoleCache.java
+  visible: true
+  text: |-
+    package account.service;
+
+    import account.model.Role;
+    import account.repository.RoleRepository;
+    import lombok.Getter;
+    import lombok.Setter;
+    import lombok.extern.slf4j.Slf4j;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Component;
+
+    @Slf4j
+    @Getter
+    @Setter
+    @Component
+    public class RoleCache {
+        private Role user;
+        private Role admin;
+        private Role acct;
+        private Role auditor;
+
+
+        private RoleRepository roleRepository;
+
+        @Autowired
+        public RoleCache(RoleRepository roleRepository) {
+            this.roleRepository = roleRepository;
+            createRoles();
+        }
+
+        private void createRoles() {
+            try {
+                this.admin = roleRepository.save(new Role("ADMINISTRATOR"));
+                this.user = roleRepository.save(new Role("USER"));
+                this.acct = roleRepository.save(new Role("ACCOUNTANT"));
+                this.auditor = roleRepository.save(new Role("AUDITOR"));
+
+            } catch (Exception e) {
+                log.warn("Error creating roles");
+            }
+        }
+    }
+  learner_created: true
+- name: src/account/model/Role.java
+  visible: true
+  text: |
+    package account.model;
+
+    import jakarta.persistence.*;
+    import lombok.Getter;
+    import lombok.NoArgsConstructor;
+    import lombok.Setter;
+
+    import java.util.List;
+    import java.util.Objects;
+
+    @Entity
+    @Table(name = "role")
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public class Role {
+        @Id
+        private String role;
+
+        @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
+        List<User> users;
+
+        public Role(String role) {
+            this.role = role;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Role role1 = (Role) o;
+            return Objects.equals(getRole(), role1.getRole());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(getRole());
+        }
+    }
+  learner_created: true
+- name: src/account/repository/RoleRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.Role;
+    import org.springframework.data.repository.CrudRepository;
+    import org.springframework.stereotype.Repository;
+
+    import java.util.Optional;
+
+    @Repository
+    public interface RoleRepository extends CrudRepository<Role, String> {
+        Optional<Role> findByRole(String role);
+    }
+  learner_created: true
+- name: src/account/controller/AdminController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.DTO.*;
+    import account.config.MyException;
+    import account.model.Action;
+    import account.model.Role;
+    import account.model.User;
+    import account.repository.UserRepository;
+    import account.service.RoleCache;
+    import account.service.SecurityService;
+    import account.service.UserService;
+    import lombok.RequiredArgsConstructor;
+    import lombok.extern.slf4j.Slf4j;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.core.annotation.AuthenticationPrincipal;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.web.bind.annotation.*;
+
+    import java.time.LocalDateTime;
+    import java.util.List;
+
+    @Slf4j
+    @RequiredArgsConstructor
+    @RestController
+    public class AdminController {
+        private final UserService userService;
+        private final UserRepository userRepository;
+        private final RoleCache roleCache;
+        private final SecurityService securityService;
+
+        @GetMapping("/api/admin/user/")
+        public ResponseEntity<List<SignupResponse>> getAllUsers() {
+
+            List<User> allUsers = userRepository.findAll();
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    allUsers.stream()
+                            .sorted()
+                            .map(user -> new SignupResponse(user))
+                            .toList());
+
+        }
+
+        @DeleteMapping("/api/admin/user/{email}")
+        public ResponseEntity<UserStatusResponse> getAllUsers(@PathVariable String email, @AuthenticationPrincipal UserDetails principle) throws MyException {
+
+            User user = userService.getUser(email);
+
+            if (user.getRoles().contains(roleCache.getAdmin()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "Can't remove ADMINISTRATOR role!");
+
+            securityService.createSecurityEvent(
+                    LocalDateTime.now(),
+                    Action.DELETE_USER,
+                    principle.getUsername(),
+                    user.getEmail(),
+                    "/api/admin/user"
+            );
+
+            userRepository.delete(user);
+
+            return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(new UserStatusResponse(email, "Deleted successfully!"));
+        }
+
+        @PutMapping("/api/admin/user/access")
+        public ResponseEntity<StatusResponse> manageUserAccess(
+                @RequestBody UserOperationRequest request,
+                @AuthenticationPrincipal UserDetails principal) throws MyException {
+            User user = userService.getUser(request.getUser());
+
+            if (user.getRoles().contains(roleCache.getAdmin()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "Can't lock the ADMINISTRATOR!");
+
+            Action action;
+            String prefix;
+            if (request.getOperation().equals(UserOperation.LOCK)) {
+                user.setNonLocked(false);
+                action = Action.LOCK_USER;
+                prefix = "L";
+            }
+            else {
+                user.setNonLocked(true);
+                user.setFailedLogins(0);
+                action = Action.UNLOCK_USER;
+                prefix = "Unl";
+            }
+
+            user = userService.save(user);
+
+            securityService.createSecurityEvent(
+                    LocalDateTime.now(),
+                    action,
+                    principal.getUsername(),
+                    prefix + "ock user " + user.getEmail(),
+                    "/api/admin/user/access"
+            );
+
+            return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(new StatusResponse("User " + user.getEmail() + " " + request.getOperation().toString().toLowerCase() + "ed!"));
+        }
+
+        @PutMapping("/api/admin/user/role")
+        public ResponseEntity<SignupResponse> changeRole(
+                @RequestBody ChangeRoleRequest request,
+                @AuthenticationPrincipal UserDetails principal) throws MyException {
+
+            User user = userService.getUser(request.getUser());
+            Role role = userService.getRole(request.getRole());
+
+            switch (request.getOperation()) {
+                case GRANT -> userService.grantRole(user, role, principal);
+                case REMOVE -> userService.removeRole(user, role, principal);
+            }
+
+            user = userRepository.save(user);
+
+            return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(new SignupResponse(user));
+        }
+
+
+    }
+  learner_created: true
+- name: src/account/model/Action.java
+  visible: true
+  text: |
+    package account.model;
+
+    public enum Action {
+        CREATE_USER,
+        CHANGE_PASSWORD,
+        ACCESS_DENIED,
+        LOGIN_FAILED,
+        GRANT_ROLE,
+        REMOVE_ROLE,
+        LOCK_USER,
+        UNLOCK_USER,
+        DELETE_USER,
+        BRUTE_FORCE
+    }
+  learner_created: true
+- name: src/account/config/AuthenticationEventListener.java
+  visible: true
+  text: |
+    package account.config;
+
+    import account.model.User;
+    import account.repository.SecurityEventRepository;
+    import account.service.UserService;
+    import jakarta.servlet.http.HttpServletRequest;
+    import jakarta.servlet.http.HttpServletResponse;
+    import lombok.RequiredArgsConstructor;
+    import lombok.extern.slf4j.Slf4j;
+    import org.springframework.context.event.EventListener;
+    import org.springframework.security.authentication.BadCredentialsException;
+    import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+    import org.springframework.security.authentication.event.AuthenticationFailureBadCredentialsEvent;
+    import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
+    import org.springframework.stereotype.Component;
+
+    import java.util.Optional;
+
+    @Slf4j
+    @Component
+    @RequiredArgsConstructor
+    public class AuthenticationEventListener {
+        private final UserService userService;
+
+
+    /*    @EventListener
+        public void authenticationFailed(AuthenticationFailureBadCredentialsEvent event) {
+
+            String username = (String) event.getAuthentication().getPrincipal();
+
+
+
+            log.info("Faled login with username: " + username + " at " + event.getException());
+
+            Optional<User> optUser = userService.getOptionalUser(username);
+
+            if (optUser.isEmpty()) username = "Anonymous";
+            else {
+                User user = optUser.get();
+                user.incFailedLogins();
+                user = userService.save(user);
+            }
+
+            // update the failed login count for the user
+            // ...
+        }*/
+
+        @EventListener
+        public void authenticationSuccess(AuthenticationSuccessEvent event) {
+
+            User user = (User) event.getAuthentication().getPrincipal();
+            log.info(((UsernamePasswordAuthenticationToken) event.getSource()).getDetails().toString());
+
+            log.info("Successful login with username: " + user.getUsername() + ", failed login attempts: " + user.getFailedLogins());
+            user.setFailedLogins(0);
+            user = userService.save(user);
+            log.info("Now failed login attempts: " + user.getFailedLogins());
+        }
+
+    }
+  learner_created: true
+- name: src/account/service/SecurityService.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.model.Action;
+    import account.model.SecurityEvent;
+    import account.repository.SecurityEventRepository;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.stereotype.Service;
+
+    import java.time.LocalDateTime;
+
+    @Service
+    @RequiredArgsConstructor
+    public class SecurityService {
+        private final SecurityEventRepository securityEventRepository;
+
+        public void createSecurityEvent(LocalDateTime date, Action action, String subject, String object, String path) {
+            SecurityEvent event = new SecurityEvent(date, action, subject, object, path);
+            event = securityEventRepository.save(event);
+        }
+    }
+  learner_created: true
+- name: src/account/service/UserService.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.config.MyException;
+    import account.model.Action;
+    import account.model.Role;
+    import account.model.User;
+    import account.repository.RoleRepository;
+    import account.repository.UserRepository;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.stereotype.Service;
+
+    import java.time.LocalDateTime;
+    import java.util.Optional;
+
+    @Service
+    @RequiredArgsConstructor
+    public class UserService {
+        private final UserRepository userRepository;
+        private final RoleCache roleCache;
+        private final RoleRepository roleRepository;
+        private final SecurityService securityService;
+
+        public User getUser(String email) throws MyException {
+            return userRepository.findByEmailIgnoreCase(email).orElseThrow(() -> new MyException(HttpStatus.NOT_FOUND, "Employee " + email + " not found"));
+        }
+
+
+        public Optional<User> getOptionalUser(String email) {
+            return userRepository.findByEmailIgnoreCase(email);
+        }
+
+        public User save(User user) {
+            return userRepository.save(user);
+        }
+
+        public void grantRole(User user, Role role, UserDetails principal) throws MyException {
+
+            if (user.getRoles().contains(role))
+                throw new MyException(HttpStatus.BAD_REQUEST, "The user already has this role!");
+
+            if (role.equals(roleCache.getAdmin()) &&
+                    (
+                            user.getRoles().contains(roleCache.getUser()) ||
+                                    user.getRoles().contains(roleCache.getAcct()) ||
+                                    user.getRoles().contains(roleCache.getAuditor())
+                    )
+            ) {
+                throw new MyException(HttpStatus.BAD_REQUEST, "The user cannot combine administrative and business roles!");
+            }
+
+            if (user.getRoles().contains(roleCache.getAdmin()) &&
+                    (
+                            role.equals(roleCache.getUser()) ||
+                                    role.equals(roleCache.getAcct()) ||
+                                    role.equals(roleCache.getAuditor())
+                    )
+            ) {
+                throw new MyException(HttpStatus.BAD_REQUEST, "The user cannot combine administrative and business roles!");
+            }
+
+            user.getRoles().add(role);
+
+            securityService.createSecurityEvent(
+                    LocalDateTime.now(),
+                    Action.GRANT_ROLE,
+                    principal.getUsername(),
+                    "Grant role " + role.getRole() + " to " + user.getEmail(),
+                    "/api/admin/user/role"
+            );
+        }
+
+        public void removeRole(User user, Role role, UserDetails principal) throws MyException {
+
+            if (!user.getRoles().contains(role))
+                throw new MyException(HttpStatus.BAD_REQUEST, "The user does not have a role!");
+
+            if (role.equals(roleCache.getAdmin()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "Can't remove ADMINISTRATOR role!");
+
+            if (user.getRoles().size() == 1)
+                throw new MyException(HttpStatus.BAD_REQUEST, "The user must have at least one role!");
+
+            user.getRoles().remove(role);
+
+            securityService.createSecurityEvent(
+                    LocalDateTime.now(),
+                    Action.REMOVE_ROLE,
+                    principal.getUsername(),
+                    "Remove role " + role.getRole() + " from " + user.getEmail(),
+                    "/api/admin/user/role"
+            );
+
+        }
+
+
+        public Role getRole(String roleName) throws MyException {
+            return roleRepository.findByRole(roleName).orElseThrow(() ->
+                    new MyException(HttpStatus.NOT_FOUND, "Role not found!"));
+        }
+    }
+  learner_created: true
+- name: src/resources/keystore.p12
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/16607#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Well done! You've finished the project. Select a new project on <a href="https://hyperskill.org/projects">Hyperskill</a>
+    to continue learning.
+  time: "Wed, 12 Jul 2023 18:56:33 UTC"
 record: -1

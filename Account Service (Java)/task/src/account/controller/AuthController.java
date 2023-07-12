@@ -5,9 +5,11 @@ import account.DTO.ChangePasswordResponse;
 import account.DTO.SignupRequest;
 import account.DTO.SignupResponse;
 import account.config.MyException;
+import account.model.Action;
 import account.model.User;
 import account.repository.UserRepository;
 import account.service.RoleCache;
+import account.service.SecurityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,6 +38,7 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final UserRepository userRepository;
     private final RoleCache roleCache;
+    private final SecurityService securityService;
 
     @PostMapping("/api/auth/signup")
     public ResponseEntity<SignupResponse> signup(
@@ -58,6 +62,8 @@ public class AuthController {
         else user.getRoles().add(roleCache.getUser());
 
         user = userRepository.save(user);
+
+        securityService.createSecurityEvent(LocalDateTime.now(), Action.CREATE_USER, "Anonymous", request.getEmail(), "/api/auth/signup");
 
         return ResponseEntity.status(HttpStatus.OK).body(new SignupResponse(user));
 
@@ -93,6 +99,14 @@ public class AuthController {
 
         user.setPassword(encoder.encode(request.getNew_password()));
         user = userRepository.save(user);
+
+        securityService.createSecurityEvent(
+                LocalDateTime.now(),
+                Action.CHANGE_PASSWORD,
+                user.getEmail(),
+                user.getEmail(),
+                "/api/auth/changepass"
+        );
 
         return ResponseEntity.status(HttpStatus.OK).body(new ChangePasswordResponse(user.getEmail()));
     }

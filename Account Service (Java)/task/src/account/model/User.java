@@ -23,6 +23,7 @@ public class User implements UserDetails, Comparable<User> {
     private String lastname;
     private String email;
     private String password;
+    private boolean isNonLocked;
     private int failedLogins;
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -40,6 +41,7 @@ public class User implements UserDetails, Comparable<User> {
         this.lastname = request.getLastname();
         this.email = request.getEmail();
         this.password = request.getPassword();
+        this.isNonLocked = true;
         this.failedLogins = 0;
         this.roles = new HashSet<>();
     }
@@ -70,7 +72,7 @@ public class User implements UserDetails, Comparable<User> {
 
     @Override
     public boolean isAccountNonLocked() {
-        return failedLogins < 5;
+        return isNonLocked;
     }
 
     @Override
@@ -86,5 +88,9 @@ public class User implements UserDetails, Comparable<User> {
     @Override
     public int compareTo(User user) {
         return this.id.compareTo(user.getId());
+    }
+
+    public void incFailedLogins() {
+        if( ++this.failedLogins >= 5) this.isNonLocked = false;
     }
 }

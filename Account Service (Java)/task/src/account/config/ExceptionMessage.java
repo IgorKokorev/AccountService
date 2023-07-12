@@ -1,3 +1,4 @@
+/*
 package account.config;
 
 import lombok.AllArgsConstructor;
@@ -9,3 +10,4 @@ public class ExceptionMessage {
     String message;
     String path;
 }
+*/

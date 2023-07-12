@@ -38,11 +38,6 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public AuthenticationFailureHandler authenticationFailureHandler() {
-        return new CustomAuthenticationFailureHandler();
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .httpBasic((httpBasic) -> httpBasic
@@ -65,11 +60,10 @@ public class WebSecurityConfig {
                 )
                 .sessionManagement((session) -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling((exceptionHandling) ->
-                        exceptionHandling.accessDeniedHandler(accessDeniedHandler));
-
-//        http.exceptionHandling((exceptionHandling) ->
-//                exceptionHandling.accessDeniedHandler(accessDeniedHandler));
+                .exceptionHandling(
+                        (exceptionHandling) -> exceptionHandling
+                                .accessDeniedHandler(accessDeniedHandler)
+                );
 
         return http.build();
     }

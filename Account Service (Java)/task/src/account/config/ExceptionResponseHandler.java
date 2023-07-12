@@ -14,17 +14,6 @@ import java.time.Instant;
 @ControllerAdvice
 public class ExceptionResponseHandler {
 
-/*    @ExceptionHandler(value = ResponseStatusException.class)
-    ResponseEntity<FailedSignupResponse> handleResponseStatusException(
-            ResponseStatusException ex, WebRequest request
-    ) {
-        Instant timestamp = Instant.now();
-        String path = ((ServletWebRequest) request).getRequest().getRequestURI();
-        return ResponseEntity
-                .status(ex.getStatusCode())
-                .body(new FailedSignupResponse(timestamp, ex.getStatusCode().value(), "Bad Request", ex.getMessage(), path));
-    }*/
-
     @ExceptionHandler(value = MyException.class)
     ResponseEntity<FailedSignupResponse> handleResponseStatusException(
             MyException ex, WebRequest request
@@ -47,12 +36,12 @@ public class ExceptionResponseHandler {
     /**
      * handlerOtherExceptions handles any unhandled exceptions.
      */
-    @ExceptionHandler(value = Exception.class)
+/*    @ExceptionHandler(value = Exception.class)
     ResponseEntity<Object> handleOtherExceptions(Exception ex, WebRequest request) {
         String requestUri = ((ServletWebRequest) request).getRequest().getRequestURI();
         ExceptionMessage exceptionMessage = new ExceptionMessage(ex.getMessage(), requestUri);
         HttpHeaders headers = new HttpHeaders();
         headers.setAccessControlAllowOrigin("*");
         return new ResponseEntity<Object>(exceptionMessage, headers, HttpStatus.BAD_REQUEST);
-    }
+    }*/
 }

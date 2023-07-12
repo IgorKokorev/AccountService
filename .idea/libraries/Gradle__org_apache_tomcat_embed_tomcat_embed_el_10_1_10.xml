@@ -2,11 +2,11 @@
   <library name="Gradle: org.apache.tomcat.embed:tomcat-embed-el:10.1.10" type="java-imported" external-system-id="GRADLE">
     <properties groupId="org.apache.tomcat.embed" artifactId="tomcat-embed-el" version="10.1.10" />
     <CLASSES>
-      <root url="jar://C:/Gradle/gradle-8.1.1/caches/modules-2/files-2.1/org.apache.tomcat.embed/tomcat-embed-el/10.1.10/717033c0417fdc7e794b382c066b7e78f6029268/tomcat-embed-el-10.1.10.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.apache.tomcat.embed/tomcat-embed-el/10.1.10/717033c0417fdc7e794b382c066b7e78f6029268/tomcat-embed-el-10.1.10.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://C:/Gradle/gradle-8.1.1/caches/modules-2/files-2.1/org.apache.tomcat.embed/tomcat-embed-el/10.1.10/b78c90ec579ec77cc4e8d19fb0a5f68ee4007d99/tomcat-embed-el-10.1.10-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.apache.tomcat.embed/tomcat-embed-el/10.1.10/b78c90ec579ec77cc4e8d19fb0a5f68ee4007d99/tomcat-embed-el-10.1.10-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

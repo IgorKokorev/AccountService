@@ -7,6 +7,7 @@ import account.model.Salary;
 import account.model.User;
 import account.repository.SalaryRepository;
 import account.repository.UserRepository;
+import account.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,7 +23,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 public class AccountController {
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final SalaryRepository salaryRepository;
 
     private final String periodRegexp = "((0[1-9])|(1[0-2]))-[0-9]{4}";
@@ -38,7 +39,7 @@ public class AccountController {
         salaryRepository.saveAll(
                 listOfSalaries.stream()
                         .map(request -> new Salary(
-                                userRepository.findByEmailIgnoreCase(request.getEmployee()).orElseThrow(),
+                                userService.getOptionalUser(request.getEmployee()).orElseThrow(),
                                 request.getPeriod(),
                                 request.getSalary()))
                         .toList()
@@ -48,6 +49,8 @@ public class AccountController {
                 .body(new StatusResponse("Added successfully!"));
     }
 
+
+
     @PutMapping("/api/acct/payments")
     public ResponseEntity<StatusResponse> updateSalary(
             @RequestBody @Valid PostSalaryRequest salaryUpdate) throws MyException {
@@ -56,9 +59,9 @@ public class AccountController {
         if (!error.isEmpty())
             throw new MyException(HttpStatus.BAD_REQUEST, error);
 
-        Optional<User> optUser = userRepository.findByEmailIgnoreCase(salaryUpdate.getEmployee());
+        Optional<User> optUser = userService.getOptionalUser(salaryUpdate.getEmployee());
         if (optUser.isEmpty()) {
-            throw new MyException(HttpStatus.BAD_REQUEST, "User '" + salaryUpdate.getEmployee() + "' does not exists, ");
+            throw new MyException(HttpStatus.BAD_REQUEST, "User '" + salaryUpdate.getEmployee() + "' does not exists");
         }
 
         User user = optUser.get();
@@ -81,7 +84,7 @@ public class AccountController {
         if (!request.getPeriod().matches(periodRegexp))
             error.append("Period '" + request.getPeriod() + "' incorrect, ");
 
-        Optional<User> optUser = userRepository.findByEmailIgnoreCase(request.getEmployee());
+        Optional<User> optUser = userService.getOptionalUser(request.getEmployee());
         if (optUser.isEmpty()) {
             error.append("User '" + request.getEmployee() + "' does not exists, ");
         } else {
@@ -109,7 +112,7 @@ public class AccountController {
         if (!request.getPeriod().matches(periodRegexp))
             error.append("Period '" + request.getPeriod() + "' incorrect, ");
 
-        Optional<User> optUser = userRepository.findByEmailIgnoreCase(request.getEmployee());
+        Optional<User> optUser = userService.getOptionalUser(request.getEmployee());
         if (optUser.isEmpty()) {
             error.append("User '" + request.getEmployee() + "' does not exists, ");
         } else {
