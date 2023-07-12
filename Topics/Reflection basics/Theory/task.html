@@ -1,0 +1,75 @@
+<h2>Reflection basics</h2>
+<div class="step-text">
+<p><strong>Reflection</strong> is a powerful feature in Java that allows a programmer to examine or modify the structure of a class at runtime. That means a program can inspect and manipulate its own code, making reflection a useful tool for runtime code generation, testing, and more. </p><p>You can imagine it as something like black magic because it's possible to break several design principles using it. Most importantly, you can<strong> bypass encapsulation</strong> by accessing member fields that are not exposed by its public API. In other words, it allows getting implementation details.</p><h5 id="javalangreflect-package">java.lang.reflect package</h5><p><strong>Java Reflection</strong> is implemented by the <code class="java">java.lang.reflect</code> package. Although <code class="java">java.lang.reflect</code> package includes many interfaces, classes, and exceptions, there are only four classes that you need to know at this level. These classes are:</p><ul><li><p><strong>Field</strong>: you can use it to get and modify name, value, datatype and access modifier of a variable.</p></li><li><p><strong>Method</strong>: you can use it to get and modify name, return type, parameter types, access modifier, and exception type of a method.</p></li><li><p><strong>Constructor</strong>: you can use it to get and modify name, parameter types and access modifier of a constructor.</p></li><li><p><strong>Modifier</strong>: you can use it to get information about a particular access modifier.</p></li></ul><h5 id="javalangclass">java.lang.Class</h5><p>There is another important point. You can't just achieve reflection only with the Reflect package that we've mentioned above. The Reflect package can give you information about a field, method or constructor of a class, but first you have to take the field list, method list, and constructor list. </p><p>This is possible with the <code class="java">java.lang.Class</code> class and its static <code class="java">forName()</code><strong> </strong>method. When you pass the name of any class to the <code class="java">forName()</code> method, it returns a <code class="java">Class</code> object that includes information about this class. </p><p>The <code class="java">java.lang.Class</code> also has several methods that you can use to get <strong>attributes </strong>(fields, methods, constructors) of the particular class you passed to <code class="java">forName()</code> method. Here are some of those methods:</p><ul><li><p><code class="java">forName(String className)</code></p></li><li><p><code class="java">getConstructors()</code></p></li><li><p><code class="java">getDeclaredConstructors()</code></p></li><li><p><code class="java">getFields()</code></p></li><li><p><code class="java">getDeclaredFields()</code></p></li><li><p><code class="java">getMethods()</code></p></li><li><p><code class="java">getDeclaredMethods()</code></p></li><li><p><code class="java">getSuperclass()</code></p></li></ul><p>There are two important things to know about these methods.</p><p>First, each of these methods except <code class="java">forName()</code>, which we have already discussed, returns an array of objects from <code class="java">java.lang.reflect</code> classes. For example,  <code class="java">getFields()</code> returns an array of objects from the <code class="java">java.lang.reflect.Field</code> class. After that, you can use methods from <code class="java">java.lang.reflect</code> package to get further information about constructors, fields, and methods.</p><p>Second, <code class="java">getConstructors()</code>, <code class="java">getFields()</code> and <code class="java">getMethods()</code> return only public constructors, fields and methods from the class represented by the <code class="java">Class</code><strong> </strong>object. These methods also return <strong>inherited </strong>public fields and methods from <strong>superclasses</strong>.  </p><p>Similarly,<code class="java">getDeclaredConstructors()</code>, <code class="java">getDeclaredFields()</code>, <code class="java">getDeclaredMethods()</code> return all the constructors, fields and methods from the class represented by the <code class="java">Class</code><strong> </strong>object. These methods don't return inherited fields and methods from superclasses.</p><p>Usually, you can see developers use declared methods more often than non-declared methods. You will understand these things better with a practical example — let's take a look at one now!</p><h5 id="coding-examples">Coding examples </h5><p>Suppose that you have a class called <code class="java">Student</code>. It has three public fields, one protected field, and a private field. It also has a default constructor and a public constructor. The <code class="java">Student</code> class also has a private method and a public method. </p><pre><code class="java">public class Student {
+    public String firstName;
+    public String lastName;
+    public int age;
+    protected String phoneNumber;
+    private String accountNumber;
+    
+    Student(){
+        System.out.println("This is default Constructor");
+    }
+    
+    public Student(String firstName, String lastName){
+        this.firstName= firstName;
+        this.lastName= lastName;
+        System.out.println("This is public Constructor");
+    }
+    
+    private String sanitizeAccountNumber(String accountNumber){
+        System.out.println("This is a private method to sanitize account number");
+        //code to sanitize accountNumber goes here. 
+        return accountNumber;
+    }
+    
+    public void setAccountNumber(String accountNumber){
+        accountNumber = sanitizeAccountNumber(accountNumber);
+        this.accountNumber = accountNumber;
+    }
+}</code></pre><p>The reflection process usually has three steps:</p><p>1. Get a  <code class="java">java.lang.Class</code> object of the class using the <code class="java">forName()</code> method. In this case, the class we want to reflect is <code class="java">Student</code>. </p><pre><code class="java">Class student = Class.forName("Student");</code></pre><p>2. Get the class attributes as an array. In this case, we are interested in fields, constructors, and methods.  </p><pre><code class="java">Constructor[] declaredConstructors = student.getDeclaredConstructors();
+Constructor[] constructors = student.getConstructors();
+Field[] declaredFields = student.getDeclaredFields();
+Field[] fields = student.getFields();
+Method[] declaredMethods = student.getDeclaredMethods();
+Method[] methods = student.getMethods();</code></pre><p>3. Get the information about class attributes and use it. In this case, we are going to retrieve the names of constructors, fields, and methods and print them.</p><pre><code class="java">for(Constructor dc : declaredConstructors) {
+    System.out.println("Declared Constructor " + dc.getName());
+}
+for (Constructor c : constructors) {
+    System.out.println("Constructor " + c.getName());
+}
+for (Field df : declaredFields) {
+    System.out.println("Declared Field " + df.getName());
+}
+for (Field f : fields) {
+    System.out.println("Field " + f.getName());
+}
+for (Method dm : declaredMethods) {
+    System.out.println("Declared Method " + dm.getName());
+}
+for (Method m : methods) {
+    System.out.println("Method " + m.getName());
+}</code></pre><p>You can write these three sections inside the <code class="java">main()</code> method and run this code. </p><h5 id="explaining-the-output">Explaining the output</h5><p>When you run the code above, you will get a list of constructors, fields, and methods: </p><pre><code class="java">Declared Constructor Student
+Declared Constructor Student
+Constructor Student
+Declared Field firstName
+Declared Field lastName
+Declared Field age
+Declared Field phoneNumber
+Declared Field accountNumber
+Field firstName
+Field lastName
+Field age
+Declared Method sanitizeAccountNumber
+Declared Method setAccountNumber
+Method setAccountNumber
+Method wait
+Method wait
+Method wait
+Method equals
+Method toString
+Method hashCode
+Method getClass
+Method notify
+Method notifyAll</code></pre><p>You can see that <code class="java">getDeclaredConstructors()</code> has returned both constructors of the <code class="java">Student</code> class, while <code class="java">getConstructors()</code> has returned only the public constructor. Likewise, <code class="java">getDeclaredFields()</code> has returned all the fields of the <code class="java">Student</code> class, while <code class="java">getFields()</code> has returned only public fields.</p><p>Finally, we print the methods of the <code class="java">Student</code> class. As expected, <code class="java">getDeclaredMethods()</code> has returned both methods. Now the interesting part is that  <code class="java">getMethods()</code> has returned some methods other than <code class="java">setAccountNumber()</code> we've expected. If you remember, in one of our previous topics, we mentioned that the <code class="java">java.lang.Object</code> class is the superclass of all the classes we create. The <code class="java">Object</code> class has <strong>nine</strong> public methods, and all classes we create inherit<strong> </strong>those methods. That's why you can see nine extra methods in the output.</p><h5 id="risks-and-downsides">Risks and downsides</h5><p>While reflection offers powerful capabilities, it should be used with caution. Use it only when necessary, and when its benefits outweigh its potential drawbacks, which are:</p><ul><li><p>Performance overhead: reflection can add significant overhead to your program, requiring extra processing to inspect and manipulate the code structure at runtime. This can lead to slower performance, especially in large and complex applications.</p></li><li><p>Maintenance issues: reflection can complicate maintaining code, as the code's behavior can change dynamically at runtime. This can make it challenging to understand how the code is being used and manipulated, leading to compatibility issues and making it harder to update or change the code in the future.</p></li></ul><p>To minimize these risks, we recommend keeping reflection limited to specific, well-defined areas of the code, ideally, within frameworks and libraries, where it can be used to provide a high level of abstraction and make the code more flexible and reusable.</p><h5 id="conclusion">Conclusion</h5><p><strong>Reflection</strong> is a way to get information about or modify fields, methods, and constructors of a class. The <code class="java">java.lang.reflect</code> package and the <code class="java">java.lang.Class</code> class are essential in Java reflection.</p><p>There are three steps in the Java reflection process: </p><ol><li><p>Get the <code class="java">Class</code> object of the class that you want to reflect on.</p></li><li><p>Get the attributes of the class you want to reflect on as a list or array using <code class="java">java.lang.Class</code> methods.</p></li><li><p>Get information about the particular attribute you got during the second step using the <code class="java">java.lang.reflect</code> package.</p></li></ol><p>Reflection is an advanced concept that requires some knowledge of <strong>JVM </strong>and Java internal processes. Anyhow, we believe the information in this topic will help you start using reflection in your projects!</p>
+</div>

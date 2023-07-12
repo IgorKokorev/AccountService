@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id=":Topics-Reflection_basics-The_parent_for_all_classes:main" external.linked.project.path="$MODULE_DIR$/../../../../../Topics/Reflection basics/The parent for all classes" external.root.project.path="$MODULE_DIR$/../../../../.." external.system.id="GRADLE" external.system.module.group="Account Service" external.system.module.type="sourceSet" external.system.module.version="unspecified" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <output url="file://$MODULE_DIR$/../../../../../Topics/Reflection basics/The parent for all classes/out/production/classes" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../../../../Topics/Reflection basics/The parent for all classes/src">
+      <sourceFolder url="file://$MODULE_DIR$/../../../../../Topics/Reflection basics/The parent for all classes/src" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

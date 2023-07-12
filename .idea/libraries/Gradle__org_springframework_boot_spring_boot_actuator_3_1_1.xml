@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="Gradle: org.springframework.boot:spring-boot-actuator:3.1.1" type="java-imported" external-system-id="GRADLE">
+    <properties groupId="org.springframework.boot" artifactId="spring-boot-actuator" version="3.1.1" />
+    <CLASSES>
+      <root url="jar://C:/Gradle/gradle-8.1.1/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-actuator/3.1.1/bf97ee56143a4614fbf90a8a845c2b930e71c3fa/spring-boot-actuator-3.1.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://C:/Gradle/gradle-8.1.1/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-actuator/3.1.1/783e7e1d4d05e00e2f3a7740f35b00049699d4f8/spring-boot-actuator-3.1.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

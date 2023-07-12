@@ -1,0 +1,1006 @@
+type: edu
+files:
+- name: src/account/AccountServiceApplication.java
+  visible: true
+  text: |-
+    package account;
+
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+    @SpringBootApplication
+    public class AccountServiceApplication {
+
+        public static void main(String[] args) {
+            SpringApplication.run(AccountServiceApplication.class, args);
+        }
+
+    }
+  learner_created: false
+- name: src/resources/application.properties
+  visible: true
+  text: |-
+    server.port=28852
+
+    management.endpoints.web.exposure.include=*
+    management.endpoint.shutdown.enabled=true
+    spring.jackson.serialization.INDENT_OUTPUT=true
+    server.error.include-message=always
+    server.error.include-binding-errors=always
+
+    spring.datasource.url=jdbc:h2:file:../service_db
+    spring.datasource.driverClassName=org.h2.Driver
+    #spring.datasource.username=sa
+    #spring.datasource.password=sa
+
+    spring.datasource.testWhileIdle=true
+    spring.datasource.test-on-borrow=true
+
+    spring.jpa.defer-datasource-initialization=true
+    spring.jpa.hibernate.ddl-auto=update
+    spring.jpa.show-sql=true
+    spring.jpa.properties.hibernate.format_sql=true
+    spring.jpa.open-in-view=false
+
+    spring.jpa.properties.hibernate.globally_quoted_identifiers=true
+  learner_created: false
+- name: build.gradle
+  visible: true
+  text: |
+    buildscript {
+        apply plugin: 'hyperskill'
+
+        repositories {
+            mavenCentral()
+        }
+
+    /*    dependencies {
+            classpath "org.springframework.boot:spring-boot-gradle-plugin:$hs.spring.bootVersion"
+            classpath "io.spring.gradle:dependency-management-plugin:$hs.spring.dependencyManagementVersion"
+        }*/
+    }
+    plugins {
+        id 'java'
+        id 'org.springframework.boot' version '3.1.1'
+        id 'io.spring.dependency-management' version '1.1.0'
+    }
+
+    //apply plugin: 'java'
+    //apply plugin: 'org.springframework.boot'
+    //apply plugin: 'io.spring.dependency-management'
+
+    repositories {
+        mavenCentral()
+    }
+
+    sourceSets.main.resources.srcDirs = ["src/resources"]
+
+    dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter'
+        implementation 'org.springframework.boot:spring-boot-starter-security'
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'com.h2database:h2'
+        implementation group: 'org.hibernate', name: 'hibernate-validator', version: '8.0.0.Final'
+
+        compileOnly 'org.projectlombok:lombok:1.18.20'
+        annotationProcessor 'org.projectlombok:lombok:1.18.20'
+        testCompileOnly 'org.projectlombok:lombok:1.18.20'
+        testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
+
+    }
+  learner_created: false
+- name: src/account/config/WebSecurityConfig.java
+  visible: true
+  text: |-
+    package account.config;
+
+    import account.service.UserDetailsServiceImpl;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.http.HttpMethod;
+    import org.springframework.security.authentication.AuthenticationManager;
+    import org.springframework.security.authentication.AuthenticationProvider;
+    import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+    import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+    import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+    import org.springframework.security.config.http.SessionCreationPolicy;
+    import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+    import org.springframework.security.crypto.password.PasswordEncoder;
+    import org.springframework.security.web.SecurityFilterChain;
+
+    @Configuration
+    @RequiredArgsConstructor
+    public class WebSecurityConfig {
+        private final UserDetailsServiceImpl userDetailsService;
+        private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+
+        @Bean
+        public BCryptPasswordEncoder passwordEncoder() {
+            return new BCryptPasswordEncoder(13);
+        }
+
+        @Bean
+        public AuthenticationManager authenticationManagerBean(HttpSecurity http) throws Exception {
+            AuthenticationManagerBuilder authenticationManagerBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
+            authenticationManagerBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+            return authenticationManagerBuilder.build();
+        }
+
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+            http
+                    .httpBasic((httpBasic) -> httpBasic
+                            .authenticationEntryPoint(restAuthenticationEntryPoint)
+                    )
+                    .cors(AbstractHttpConfigurer::disable)
+                    .csrf(AbstractHttpConfigurer::disable)
+                    .authorizeHttpRequests((authz) -> authz
+                            .requestMatchers(HttpMethod.POST, "/api/auth/signup/**").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/auth/test/**").permitAll()
+                            .requestMatchers("/actuator/**").permitAll()
+                            .requestMatchers(HttpMethod.POST, "/api/auth/changepass/**").authenticated()
+                            .requestMatchers(HttpMethod.GET, "/api/empl/payment/**").hasAnyRole("USER", "ACCOUNTANT")
+                            .requestMatchers(HttpMethod.POST, "/api/acct/payments/**").permitAll()//.hasRole("ACCOUNTANT")
+                            .requestMatchers(HttpMethod.PUT, "/api/acct/payments/**").permitAll()//.hasRole("ACCOUNTANT")
+                            .requestMatchers(HttpMethod.GET, "/api/admin/user/**").hasRole("ADMIN")
+                            .requestMatchers(HttpMethod.DELETE, "/api/admin/user/**").hasRole("ADMIN")
+                            .requestMatchers(HttpMethod.PUT, "/api/admin/user/role/**").hasRole("ADMIN")
+                            .anyRequest().authenticated()
+                    )
+                    .sessionManagement((session) -> session
+                            .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // no session
+                    );
+            return http.build();
+        }
+    }
+  learner_created: false
+- name: src/account/DTO/SignupRequest.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import jakarta.validation.constraints.NotBlank;
+    import jakarta.validation.constraints.NotNull;
+    import lombok.Getter;
+    import lombok.NoArgsConstructor;
+    import lombok.Setter;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public class SignupRequest {
+        @NotBlank
+        private String name;
+        @NotBlank
+        private String lastname;
+        @NotNull
+        private String email;
+        @NotNull
+        private String password;
+
+    }
+  learner_created: false
+- name: src/account/controller/AuthController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.DTO.ChangePasswordRequest;
+    import account.DTO.ChangePasswordResponse;
+    import account.DTO.SignupRequest;
+    import account.DTO.SignupResponse;
+    import account.config.MyException;
+    import account.model.User;
+    import account.model.User;
+    import account.repository.UserRepository;
+    import jakarta.validation.Valid;
+    import lombok.RequiredArgsConstructor;
+    import lombok.extern.slf4j.Slf4j;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.core.annotation.AuthenticationPrincipal;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.security.crypto.password.PasswordEncoder;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+    import org.springframework.web.bind.annotation.RestController;
+
+    import java.util.Arrays;
+    import java.util.List;
+
+    @Slf4j
+    @RestController
+    @RequiredArgsConstructor
+    public class AuthController {
+        private final List<String> breachedPasswords = Arrays.asList("PasswordForJanuary", "PasswordForFebruary", "PasswordForMarch", "PasswordForApril",
+                "PasswordForMay", "PasswordForJune", "PasswordForJuly", "PasswordForAugust",
+                "PasswordForSeptember", "PasswordForOctober", "PasswordForNovember", "PasswordForDecember");
+
+        private final PasswordEncoder encoder;
+        private final UserRepository userRepository;
+
+        @PostMapping("/api/auth/signup")
+        public ResponseEntity<SignupResponse> signup(
+                @RequestBody @Valid SignupRequest request) throws MyException {
+
+            if(!isCorrectPassword(request.getPassword()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "The password length must be at least 12 chars!");
+            if(isPasswordBreached(request.getPassword()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "The password is in the hacker's database!");
+
+            if(!isCorrectEmail(request.getEmail()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "Incorrect email");
+            if (userRepository.findByEmailIgnoreCase(request.getEmail()).isPresent())
+                throw new MyException(HttpStatus.BAD_REQUEST, "User exist!");
+
+            request.setEmail(request.getEmail().toLowerCase());
+            request.setPassword(encoder.encode(request.getPassword()));
+            User user = new User(request);
+            user = userRepository.save(user);
+
+            return ResponseEntity.status(HttpStatus.OK).body(new SignupResponse(user));
+
+        }
+
+        private boolean isPasswordBreached(String password) {
+            return breachedPasswords.contains(password);
+        }
+
+        private boolean isCorrectPassword(String password) {
+            return password.length() >= 12;
+        }
+
+        private boolean isCorrectEmail(String email) {
+            String emailRegexp = "[\\w.-]+@acme\\.com";
+            return email.matches(emailRegexp);
+        }
+
+        @PostMapping("/api/auth/changepass")
+        public ResponseEntity<ChangePasswordResponse> changePassword(
+                @RequestBody @Valid ChangePasswordRequest request,
+                @AuthenticationPrincipal UserDetails principal) throws MyException {
+
+            if(!isCorrectPassword(request.getNew_password()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "Password length must be 12 chars minimum!");
+            if(isPasswordBreached(request.getNew_password()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "The password is in the hacker's database!");
+
+            User user = userRepository.findByEmailIgnoreCase(principal.getUsername()).orElseThrow();
+
+            if (encoder.matches(request.getNew_password(), user.getPassword()))
+                throw new MyException(HttpStatus.BAD_REQUEST, "The passwords must be different!");
+
+            user.setPassword(encoder.encode(request.getNew_password()));
+            user = userRepository.save(user);
+
+            return ResponseEntity.status(HttpStatus.OK).body(new ChangePasswordResponse(user.getEmail()));
+        }
+
+        @GetMapping("/api/auth/test")
+        public ResponseEntity<List<User>> test() {
+            log.info("Entering test endpoint");
+    //        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    //        log.info(auth.getName());
+            return ResponseEntity.status(HttpStatus.OK).body(userRepository.findAll());
+        }
+    }
+  learner_created: false
+- name: src/account/DTO/SignupResponse.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import account.model.User;
+    import lombok.Getter;
+    import lombok.NoArgsConstructor;
+    import lombok.Setter;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public class SignupResponse {
+        private long id;
+        private String name;
+        private String lastname;
+        private String email;
+
+        public SignupResponse(User user) {
+            this.id = user.getId();
+            this.name = user.getName();
+            this.lastname = user.getLastname();
+            this.email = user.getEmail();
+        }
+    }
+  learner_created: false
+- name: src/account/service/UserDetailsServiceImpl.java
+  visible: true
+  text: |
+    package account.service;
+
+    import account.repository.UserRepository;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.security.core.userdetails.UserDetailsService;
+    import org.springframework.security.core.userdetails.UsernameNotFoundException;
+    import org.springframework.stereotype.Service;
+
+    @Service
+    @RequiredArgsConstructor
+    public class UserDetailsServiceImpl implements UserDetailsService {
+        private final UserRepository userRepository;
+        @Override
+        public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+            return userRepository.findByEmailIgnoreCase(username).orElseThrow();
+        }
+    }
+  learner_created: false
+- name: src/account/model/User.java
+  visible: true
+  text: |
+    package account.model;
+
+    import account.DTO.SignupRequest;
+    import jakarta.persistence.*;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+    import org.springframework.security.core.GrantedAuthority;
+    import org.springframework.security.core.authority.SimpleGrantedAuthority;
+    import org.springframework.security.core.userdetails.UserDetails;
+
+    import java.util.*;
+
+    @Data
+    @Entity
+    @NoArgsConstructor
+    @Table(name = "employee")
+    public class User implements UserDetails {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long id;
+
+        private String name;
+        private String lastname;
+        private String email;
+        private String password;
+
+        private String role;
+
+        @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+        private List<Salary> salaries;
+
+        public User(SignupRequest request) {
+            this.name = request.getName();
+            this.lastname = request.getLastname();
+            this.email = request.getEmail();
+            this.password = request.getPassword();
+            this.role = "USER";
+        }
+        @Override
+        public Collection<? extends GrantedAuthority> getAuthorities() {
+            return Arrays.asList(new SimpleGrantedAuthority("ROLE_" + role));
+        }
+
+        @Override
+        public String getPassword() {
+            return password;
+        }
+
+        @Override
+        public String getUsername() {
+            return email;
+        }
+
+        @Override
+        public boolean isAccountNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isAccountNonLocked() {
+            return true;
+        }
+
+        @Override
+        public boolean isCredentialsNonExpired() {
+            return true;
+        }
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
+    }
+  learner_created: false
+- name: src/account/DTO/FailedSignupResponse.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Getter;
+    import lombok.NoArgsConstructor;
+    import lombok.Setter;
+
+    import java.time.Instant;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class FailedSignupResponse {
+        Instant timestamp;
+        int status;
+        String error;
+        String message;
+        String path;
+    }
+  learner_created: false
+- name: src/account/config/ExceptionResponseHandler.java
+  visible: true
+  text: |
+    package account.config;
+
+    import account.DTO.FailedSignupResponse;
+    import org.springframework.http.HttpHeaders;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.ControllerAdvice;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+    import org.springframework.web.context.request.ServletWebRequest;
+    import org.springframework.web.context.request.WebRequest;
+    import org.springframework.web.server.ResponseStatusException;
+
+    import java.time.Instant;
+
+    @ControllerAdvice
+    public class ExceptionResponseHandler {
+
+    /*    @ExceptionHandler(value = ResponseStatusException.class)
+        ResponseEntity<FailedSignupResponse> handleResponseStatusException(
+                ResponseStatusException ex, WebRequest request
+        ) {
+            Instant timestamp = Instant.now();
+            String path = ((ServletWebRequest) request).getRequest().getRequestURI();
+            return ResponseEntity
+                    .status(ex.getStatusCode())
+                    .body(new FailedSignupResponse(timestamp, ex.getStatusCode().value(), "Bad Request", ex.getMessage(), path));
+        }*/
+
+        @ExceptionHandler(value = MyException.class)
+        ResponseEntity<FailedSignupResponse> handleResponseStatusException(
+                MyException ex, WebRequest request
+        ) {
+            Instant timestamp = Instant.now();
+            String path = ((ServletWebRequest) request).getRequest().getRequestURI();
+            return ResponseEntity
+                    .status(ex.getStatus())
+                    .body(new FailedSignupResponse(timestamp, ex.getStatus().value(), "Bad Request", ex.getMessage(), path));
+        }
+
+        /**
+         * handlerOtherExceptions handles any unhandled exceptions.
+         */
+        @ExceptionHandler(value = Exception.class)
+        ResponseEntity<Object> handleOtherExceptions(Exception ex, WebRequest request) {
+            String requestUri = ((ServletWebRequest) request).getRequest().getRequestURI();
+            ExceptionMessage exceptionMessage = new ExceptionMessage(ex.getMessage(), requestUri);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccessControlAllowOrigin("*");
+            return new ResponseEntity<Object>(exceptionMessage, headers, HttpStatus.BAD_REQUEST);
+        }
+    }
+  learner_created: false
+- name: src/account/config/ExceptionMessage.java
+  visible: true
+  text: |
+    package account.config;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+
+    @Data
+    @AllArgsConstructor
+    public class ExceptionMessage {
+        String message;
+        String path;
+    }
+  learner_created: false
+- name: src/account/config/RestAuthenticationEntryPoint.java
+  visible: true
+  text: |-
+    package account.config;
+
+    import jakarta.servlet.http.HttpServletRequest;
+    import jakarta.servlet.http.HttpServletResponse;
+    import org.springframework.security.core.AuthenticationException;
+    import org.springframework.security.web.AuthenticationEntryPoint;
+    import org.springframework.stereotype.Component;
+
+    import java.io.IOException;
+
+    // Handles auth error
+    @Component
+    public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+        @Override
+        public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
+        }
+    }
+  learner_created: false
+- name: src/account/repository/UserRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.User;
+    import org.springframework.data.repository.CrudRepository;
+    import org.springframework.stereotype.Repository;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    @Repository
+    public interface UserRepository extends CrudRepository<User, Long> {
+        Optional<User> findByEmailIgnoreCase(String username);
+        List<User> findAll();
+    }
+  learner_created: false
+- name: src/account/DTO/ChangePasswordRequest.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import jakarta.validation.constraints.NotNull;
+    import lombok.Data;
+
+    @Data
+    public class ChangePasswordRequest {
+        @NotNull
+        private String new_password;
+    }
+  learner_created: false
+- name: src/account/config/MyException.java
+  visible: true
+  text: |
+    package account.config;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import org.springframework.http.HttpStatus;
+
+    @Data
+    @AllArgsConstructor
+    public class MyException extends Exception {
+        private HttpStatus status;
+        private String message;
+    }
+  learner_created: false
+- name: src/account/DTO/ChangePasswordResponse.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+
+    @Data
+    @AllArgsConstructor
+    public class ChangePasswordResponse {
+        private String email;
+        private String status;
+
+        public ChangePasswordResponse(String email) {
+            this.email = email;
+            this.status = "The password has been updated successfully";
+        }
+    }
+  learner_created: false
+- name: src/account/controller/PaymentController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.DTO.GetSalaryResponse;
+    import account.DTO.SignupResponse;
+    import account.config.MyException;
+    import account.model.Salary;
+    import account.model.User;
+    import account.repository.SalaryRepository;
+    import account.repository.UserRepository;
+
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.security.core.annotation.AuthenticationPrincipal;
+    import org.springframework.security.core.userdetails.UserDetails;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestParam;
+    import org.springframework.web.bind.annotation.RestController;
+
+    import java.util.List;
+    import java.util.Objects;
+    import java.util.Optional;
+
+    @RestController
+    @RequiredArgsConstructor
+    public class PaymentController {
+        private final UserRepository userRepository;
+        private final SalaryRepository salaryRepository;
+        private final String periodRegexp = "((0[1-9])|(1[0-2]))-[0-9]{4}";
+
+        @GetMapping("/api/empl/payment")
+        public ResponseEntity<Object> getOnePayment(
+                @RequestParam(required = false) String period,
+                @AuthenticationPrincipal UserDetails user) throws MyException {
+
+            if (period == null) {
+                return ResponseEntity.status(HttpStatus.OK)
+                        .body(salaryRepository.findByUserOrderByYearDescMonthDesc((User) user).stream()
+                                .map(salary -> new GetSalaryResponse(salary))
+                                .toList()
+                        );
+            }
+
+            if (!period.matches(periodRegexp))
+                throw new MyException(HttpStatus.BAD_REQUEST, "Period '" + period + "' incorrect, ");
+
+            Optional<Salary> optSalary = salaryRepository.findByUserAndPeriod((User) user, period);
+
+            if (optSalary.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.OK).body(null);
+            } else {
+                return ResponseEntity.status(HttpStatus.OK)
+                        .body(new GetSalaryResponse(optSalary.get()));
+            }
+        }
+
+    }
+  learner_created: false
+- name: src/account/controller/AccountController.java
+  visible: true
+  text: |
+    package account.controller;
+
+    import account.DTO.PostSalaryRequest;
+    import account.DTO.StatusResponse;
+    import account.config.MyException;
+    import account.model.Salary;
+    import account.model.User;
+    import account.repository.SalaryRepository;
+    import account.repository.UserRepository;
+    import jakarta.validation.Valid;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.PutMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+    import org.springframework.web.bind.annotation.RestController;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    @RestController
+    @RequiredArgsConstructor
+    public class AccountController {
+        private final UserRepository userRepository;
+        private final SalaryRepository salaryRepository;
+
+        private final String periodRegexp = "((0[1-9])|(1[0-2]))-[0-9]{4}";
+
+        @PostMapping("/api/acct/payments")
+        public ResponseEntity<StatusResponse> salary(
+                @RequestBody List<@Valid PostSalaryRequest> listOfSalaries) throws MyException {
+
+            String error = checkListOfSalaries(listOfSalaries);
+            if (!error.isEmpty())
+                throw new MyException(HttpStatus.BAD_REQUEST, error);
+
+            salaryRepository.saveAll(
+                    listOfSalaries.stream()
+                            .map(request -> new Salary(
+                                    userRepository.findByEmailIgnoreCase(request.getEmployee()).orElseThrow(),
+                                    request.getPeriod(),
+                                    request.getSalary()))
+                            .toList()
+            );
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new StatusResponse("Added successfully!"));
+        }
+
+        @PutMapping("/api/acct/payments")
+        public ResponseEntity<StatusResponse> updateSalary(
+                @RequestBody @Valid PostSalaryRequest salaryUpdate) throws MyException {
+
+            String error = checkOneSalaryRequestToUpdate(salaryUpdate);
+            if (!error.isEmpty())
+                throw new MyException(HttpStatus.BAD_REQUEST, error);
+
+            Optional<User> optUser = userRepository.findByEmailIgnoreCase(salaryUpdate.getEmployee());
+            if (optUser.isEmpty()) {
+                throw new MyException(HttpStatus.BAD_REQUEST, "User '" + salaryUpdate.getEmployee() + "' does not exists, ");
+            }
+
+            User user = optUser.get();
+            Salary salary = salaryRepository.findByUserAndPeriod(user, salaryUpdate.getPeriod())
+                    .orElseGet(() -> new Salary(user, salaryUpdate.getPeriod(), 0L));
+
+            salary.setSalary(salaryUpdate.getSalary());
+
+            salaryRepository.save(salary);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new StatusResponse("Updated successfully!"));
+        }
+
+        private String checkOneSalaryRequestToUpdate(PostSalaryRequest request) {
+            StringBuilder error = new StringBuilder();
+
+            if (request.getSalary() < 0.0) error.append("Negative salary '" + request.getSalary() + "', ");
+
+            if (!request.getPeriod().matches(periodRegexp))
+                error.append("Period '" + request.getPeriod() + "' incorrect, ");
+
+            Optional<User> optUser = userRepository.findByEmailIgnoreCase(request.getEmployee());
+            if (optUser.isEmpty()) {
+                error.append("User '" + request.getEmployee() + "' does not exists, ");
+            } else {
+                if (salaryRepository.findByUserAndPeriod(optUser.get(), request.getPeriod()).isEmpty())
+                    error.append("User '" + request.getEmployee() + "' has not received salary for '" + request.getPeriod() + "' yet, ");
+            }
+
+            return error.toString();
+        }
+
+        private String checkListOfSalaries(List<PostSalaryRequest> listOfSalaries) {
+            StringBuilder error = new StringBuilder();
+            for (PostSalaryRequest request : listOfSalaries) {
+                error.append(checkOneSalaryRequest(request));
+            }
+            return error.toString();
+        }
+
+        private String checkOneSalaryRequest(PostSalaryRequest request) {
+
+            StringBuilder error = new StringBuilder();
+
+            if (request.getSalary() < 0.0) error.append("Negative salary '" + request.getSalary() + "', ");
+
+            if (!request.getPeriod().matches(periodRegexp))
+                error.append("Period '" + request.getPeriod() + "' incorrect, ");
+
+            Optional<User> optUser = userRepository.findByEmailIgnoreCase(request.getEmployee());
+            if (optUser.isEmpty()) {
+                error.append("User '" + request.getEmployee() + "' does not exists, ");
+            } else {
+                if (salaryRepository.findByUserAndPeriod(optUser.get(), request.getPeriod()).isPresent())
+                    error.append("User '" + request.getEmployee() + "' already received salary for '" + request.getPeriod() + "', ");
+            }
+
+            return error.toString();
+        }
+    }
+  learner_created: false
+- name: src/account/model/Salary.java
+  visible: true
+  text: |
+    package account.model;
+
+    import account.DTO.PostSalaryRequest;
+    import jakarta.persistence.*;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @Entity
+    @NoArgsConstructor
+    @Table(name = "salary")
+    public class Salary {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private long id;
+
+        @ManyToOne/*(fetch = FetchType.EAGER)*/
+        @JoinColumn(nullable = false, name = "employee_id")
+        private User user;
+
+        private String period;
+
+        private int month;
+
+        private int year;
+
+        private Long salary;
+
+        public Salary(User user, String period, Long salary) {
+            this.user = user;
+            this.period = period;
+            this.salary = salary;
+
+            String[] split = period.split("-");
+            this.month = Integer.parseInt(split[0]);
+            this.year = Integer.parseInt(split[1]);
+        }
+    }
+  learner_created: false
+- name: src/account/DTO/PostSalaryRequest.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import account.model.User;
+    import jakarta.validation.constraints.NotBlank;
+    import jakarta.validation.constraints.NotNull;
+    import lombok.Data;
+
+    @Data
+    public class PostSalaryRequest {
+        @NotBlank
+        private String employee;
+        @NotBlank
+        private String period;
+        @NotNull
+        private Long salary;
+    }
+  learner_created: false
+- name: src/account/DTO/StatusResponse.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import lombok.AllArgsConstructor;
+    import lombok.Data;
+    import lombok.NoArgsConstructor;
+
+    @Data
+    @AllArgsConstructor
+    public class StatusResponse {
+        private String status;
+
+    }
+  learner_created: false
+- name: src/account/repository/SalaryRepository.java
+  visible: true
+  text: |
+    package account.repository;
+
+    import account.model.Salary;
+    import account.model.User;
+    import org.springframework.data.repository.CrudRepository;
+
+    import java.util.List;
+    import java.util.Optional;
+
+    public interface SalaryRepository extends CrudRepository<Salary, Long> {
+        public List<Salary> findByUserOrderByYearDescMonthDesc(User user);
+        public Optional<Salary> findByUserAndPeriod(User user, String period);
+    }
+  learner_created: false
+- name: src/account/DTO/GetSalaryResponse.java
+  visible: true
+  text: |
+    package account.DTO;
+
+    import account.model.Salary;
+    import com.fasterxml.jackson.annotation.JsonIgnore;
+    import lombok.Data;
+
+    @Data
+    public class GetSalaryResponse {
+        @JsonIgnore
+        private final String[] months = {"January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"};
+
+        private String name;
+        private String lastname;
+        private String period;
+        private String salary;
+
+        public GetSalaryResponse(Salary salary) {
+            this.name = salary.getUser().getName();
+            this.lastname = salary.getUser().getLastname();
+            this.period = months[salary.getMonth() - 1] + "-" + salary.getYear();
+            this.salary = "" + (salary.getSalary() / 100) + " dollar(s) " + (salary.getSalary() % 100) + " cent(s)";
+        }
+    }
+  learner_created: false
+- name: test/AccountServiceTest.java
+  visible: false
+  text: |
+    import account.AccountServiceApplication;
+    import org.hyperskill.hstest.dynamic.DynamicTest;
+    import org.hyperskill.hstest.dynamic.input.DynamicTesting;
+    import org.hyperskill.hstest.exception.outcomes.WrongAnswer;
+    import org.hyperskill.hstest.mocks.web.request.HttpRequest;
+    import org.hyperskill.hstest.stage.SpringTest;
+    import org.hyperskill.hstest.testcase.CheckResult;
+
+    import javax.net.ssl.*;
+    import java.security.cert.X509Certificate;
+
+    public class AccountServiceTest extends SpringTest {
+      public AccountServiceTest() {
+        super(AccountServiceApplication.class, "../service_db.mv.db");
+      }
+
+      SSLSocket socket;
+      java.security.cert.X509Certificate[] chain;
+
+      // Warning!!! Only for testing reason, trust all certificates!
+      TrustManager[] trustAllCerts = new TrustManager[] {
+              new X509TrustManager() {
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                  return new java.security.cert.X509Certificate[0];
+                }
+                public void checkClientTrusted(
+                        java.security.cert.X509Certificate[] certs, String authType) {
+                }
+                public void checkServerTrusted(
+                        java.security.cert.X509Certificate[] certs, String authType) {
+                }
+              }
+      };
+
+      // Test SSL
+      public CheckResult checkCertificateName(String nameCN) {
+        try {
+          SSLContext sc = SSLContext.getInstance("SSL");
+          //ТАК нельзя!!! доверяем всем сертификатам, только для тестирования и разработки!!!
+          sc.init(null, trustAllCerts, new java.security.SecureRandom());
+          SSLSocketFactory factory = sc.getSocketFactory();
+          HttpRequest request = get("");
+          socket = (SSLSocket) factory.createSocket(request.getHost(), request.getPort());
+          getCertificates();
+          if (findCert(nameCN)) {
+            return CheckResult.correct();
+          } else {
+            throw new WrongAnswer("Not found certificate with CN - " + nameCN);
+          }
+        } catch (Exception e) {
+          e.printStackTrace();
+          System.out.println("Connection not found");
+          throw new WrongAnswer("Can't establish https connection!");
+        }
+      }
+
+      // Get certificate chain
+      public void getCertificates() {
+        try {
+          chain = (X509Certificate[]) socket.getSession().getPeerCertificates();
+        } catch (SSLPeerUnverifiedException e) {
+          e.printStackTrace();
+          System.out.println(e.toString());
+        }
+      }
+
+
+      // Searching certificate by Common Name
+      public boolean findCert(String subject) {
+        for (java.security.cert.X509Certificate c : chain) {
+          String subjectName = c.getSubjectDN().getName();
+          System.out.println(subjectName + " " + c.getSigAlgName());
+          if (subjectName.contains("CN=" + subject)) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      @DynamicTest
+      DynamicTesting[] dt = new DynamicTesting[]{
+
+              // Check certificate name
+              () -> checkCertificateName("accountant_service"),
+      };
+    }
+  learner_created: false
+feedback_link: https://hyperskill.org/learn/step/16607#comment
+status: Unchecked
+record: -1
